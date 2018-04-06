@@ -1,0 +1,35 @@
+{
+  "name": "bucketh",
+  "version": "0.0.1",
+  "description": "Smart contracts for ipfs file management ",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node_modules/.bin/truffle test",
+    "lint": "solium --dir ./contracts",
+    "converage": "node_modules/.bin/solidity-coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/halonproject/bucketh.git"
+  },
+  "keywords": [
+    "ipfs",
+    "ethereum",
+    "s3"
+  ],
+  "author": "Chris Purta",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/halonproject/bucketh/issues"
+  },
+  "homepage": "https://github.com/halonproject/bucketh#readme",
+  "devDependencies": {
+    "coveralls": "^3.0.0",
+    "solidity-coverage": "^0.4.13",
+    "solium": "^1.1.5",
+    "truffle": "^4.1.3"
+  }
+}
