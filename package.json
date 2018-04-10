@@ -9,7 +9,7 @@
   "scripts": {
     "test": "node_modules/.bin/truffle test",
     "lint": "solium --dir ./contracts",
-    "converage": "node_modules/.bin/solidity-coverage"
+    "coverage": "node_modules/.bin/solidity-coverage"
   },
   "repository": {
     "type": "git",
