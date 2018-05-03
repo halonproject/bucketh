@@ -19,7 +19,7 @@ contract Bucket is Ownable {
     function addFile(string _filename, string _ipfsHash) public onlyOwner returns (bool) {
         bytes memory _filenameBytes = bytes(_filename);
         bytes memory _hashBytes = bytes(_filename);
-        if (_fileExists(_filename) || _filenameBytes.length == 0 || _hashBytes.length == 0) {
+        if (fileExists[_filename] || _filenameBytes.length == 0 || _hashBytes.length == 0) {
             return false;
         }
 
@@ -47,7 +47,7 @@ contract Bucket is Ownable {
 
         string storage fileHash = fileHashes[_filename];
         fileHashes[_filename] = "";
-        fileExists[fileHash] = false;
+        fileExists[_filename] = false;
         emit FileRemoved(_filename, fileHash);
         return true;
     }
