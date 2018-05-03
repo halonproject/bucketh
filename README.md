@@ -1,5 +1,8 @@
 # bucketh
 
+[![CircleCI](https://circleci.com/gh/halonproject/bucketh/tree/master.svg?style=svg)](https://circleci.com/gh/halonproject/bucketh/tree/master)
+[![Coverage Status](https://coveralls.io/repos/github/halonproject/bucketh/badge.svg?branch=master)](https://coveralls.io/github/halonproject/bucketh?branch=master)
+
 Solidity contracts that holds the files and IPFS hashes that belong to a "bucket".
 These provide a type of registry for which files are register to which bucket. The
 contracts are to be used by applications which can add files to IPFS and register
