@@ -22,6 +22,10 @@ $ npm install
 $ npm run test
 ```
 
+## Test instances
+
+Rinkeby: 0xed2f9a10733701ada272af12f936f1f0592d9531
+
 ## LICENSE
 
 GPL-3.0
