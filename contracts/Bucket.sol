@@ -16,6 +16,10 @@ contract Bucket is Ownable {
         owner = msg.sender;
     }
 
+    function destroy() onlyOwner public {
+        selfdestruct(owner);
+    }
+
     function addFile(string _filename, string _ipfsHash) public onlyOwner returns (bool) {
         bytes memory _filenameBytes = bytes(_filename);
         bytes memory _hashBytes = bytes(_filename);
