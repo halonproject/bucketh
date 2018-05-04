@@ -54,5 +54,12 @@ contract("Bucket", accounts => {
             let files = await bucket.totalFiles()
             assert.equal(files.toNumber(), 0, "bucket should not have any files in it")
         })
+
+        it("re-add removed file", async () => {
+            await bucket.addFile("foo.txt", "fakehash123abc", {from: owner})
+
+            let file = await bucket.totalFiles()
+            assert.equal(file.toNumber(), 1, "bucket should only contain 1 file")
+        })
     })
 })
