@@ -1,3 +1,4 @@
+const { assertRevert } = require("./helpers/assertThrow")
 const Bucket = artifacts.require("Bucket")
 
 contract("Bucket", accounts => {
@@ -60,6 +61,26 @@ contract("Bucket", accounts => {
 
             let file = await bucket.totalFiles()
             assert.equal(file.toNumber(), 1, "bucket should only contain 1 file")
+        })
+
+        context("non-owners", async () => {
+            it("non-owner cannot add file", async () => {
+                return assertRevert( async () => {
+                    await bucket.addFile("foo.txt", "fakehash123abc", {from: accounts[1]})
+                })
+            })
+
+            it("non-owner cannot remove file", async () => {
+                return assertRevert( async () => {
+                    await bucket.removeFile("foo.txt", {from: accounts[1]})
+                })
+            })
+
+            it("non-owner cannot set file hash", async () => {
+                return assertRevert( async () => {
+                    await bucket.setIPFSHash("foo.txt", "321hashfake", {from: accounts[1]})
+                })
+            })
         })
     })
 })

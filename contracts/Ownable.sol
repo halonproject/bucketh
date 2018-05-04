@@ -10,6 +10,7 @@ contract Ownable {
     address public owner;
 
 
+    event OwnershipRenounced(address indexed previousOwner);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
 
@@ -37,6 +38,14 @@ contract Ownable {
         require(newOwner != address(0));
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
+    }
+
+    /**
+     * @dev Allows the current owner to relinquish control of the contract.
+     */
+    function renounceOwnership() public onlyOwner {
+      emit OwnershipRenounced(owner);
+      owner = address(0);
     }
 
 }
