@@ -12,6 +12,10 @@ contract("Bucket", accounts => {
         assert.equal(await bucket.owner(), owner, "Bucket contract owner should be " + owner)
     })
 
+    after("Destroy bucket", async () => {
+        await bucket.destroy({from: owner})
+    })
+
     context("files handling", async () => {
         it("add file", async () => {
             await bucket.addFile("foo.txt", "fakehash123abc", {from: owner})
@@ -79,6 +83,12 @@ contract("Bucket", accounts => {
             it("non-owner cannot set file hash", async () => {
                 return assertRevert( async () => {
                     await bucket.setIPFSHash("foo.txt", "321hashfake", {from: accounts[1]})
+                })
+            })
+
+            it("non-owner cannot destroy bucket", async () => {
+                return assertRevert( async () => {
+                    await bucket.destroy({from: accounts[1]})
                 })
             })
         })
