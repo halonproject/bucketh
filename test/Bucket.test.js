@@ -16,80 +16,85 @@ contract("Bucket", accounts => {
         await bucket.destroy({from: owner})
     })
 
-    context("files handling", async () => {
+    context("file handling", async () => {
         it("add file", async () => {
-            await bucket.addFile("foo.txt", "fakehash123abc", {from: owner})
-
-            let file = await bucket.totalFiles()
-            assert.equal(file.toNumber(), 1, "bucket should only contain 1 file")
+            assert.ok(await bucket.addFile("fakehash123abc", "foo.txt", 512, true, {from: owner}))
         })
 
-        it("should not re-add existing file", async () => {
-            await bucket.addFile("foo.txt", "fakehash123abc", {from: owner})
+        it("get file", async () => {
+            let file = await bucket.getFile(1)
 
-            let file = await bucket.totalFiles()
-            assert.equal(file.toNumber(), 1, "bucket should only contain 1 file")
+            assert.equal(file[0], "fakehash123abc")
+            assert.equal(file[1], "foo.txt")
+            assert.equal(file[2], 512)
+            assert.equal(file[3], true)
+            assert.equal(file[4], false)
+            assert.equal(file[5], owner)
         })
 
-        it("check ipfs hash", async () => {
-            assert.equal(await bucket.ipfsHash("foo.txt", {from: owner}), "fakehash123abc")
+        it("rename file", async () => {
+            await bucket.setFileName(1, "bar.txt", {from: owner})
+
+            let file = await bucket.getFile(1)
+            assert.equal(file[0], "fakehash123abc")
+            assert.equal(file[1], "bar.txt")
+            assert.equal(file[2], 512)
+            assert.equal(file[3], true)
+            assert.equal(file[4], false)
+            assert.equal(file[5], owner)
         })
 
-        it("update ipfs hash", async () => {
-            await bucket.setIPFSHash("foo.txt", "QmeHiTqVSKdzB8K6RCpFUsSsxFB96fAz8ZkjAn2erVCYPE", {from: owner})
+        it("replace file", async () => {
+            await bucket.setFileContent(1, "QmeHiTqVSKdzB8K6RCpFUsSsxFB96fAz8ZkjAn2erVCYPE", 5260, {from: owner})
 
-            assert.equal(await bucket.ipfsHash("foo.txt", {from: owner}), "QmeHiTqVSKdzB8K6RCpFUsSsxFB96fAz8ZkjAn2erVCYPE")
+            let file = await bucket.getFile(1)
+            assert.equal(file[0], "QmeHiTqVSKdzB8K6RCpFUsSsxFB96fAz8ZkjAn2erVCYPE")
+            assert.equal(file[1], "bar.txt")
+            assert.equal(file[2], 5260)
+            assert.equal(file[3], true)
+            assert.equal(file[4], false)
+            assert.equal(file[5], owner)
         })
 
-        it("cannot update ipfs hash of file not in bucket", async () => {
-            await bucket.setIPFSHash("bar.txt", "fakehash123abc", {from: owner})
-            assert.equal(await bucket.ipfsHash("bar.txt", {from: owner}), "")
-        })
+        context("permissions", async () => {
+            it("owner has read permissions", async () => {
+                assert.isTrue(await bucket.hasReadAccess(1, owner))
+            })
 
-        it("cannot remove non-existent file", async () => {
-            await bucket.removeFile("bar.txt")
+            it("owner has write permissions", async () => {
+                assert.isTrue(await bucket.hasWriteAccess(1, owner))
+            })
 
-            let files = await bucket.totalFiles()
-            assert.equal(files.toNumber(), 1, "bucket should still have one file in it")
-        })
+            it("non-owner account should not have read permissions", async () => {
+                assert.isFalse(await bucket.hasReadAccess(1, accounts[1]))
+            })
 
-        it("remove file", async () => {
-            await bucket.removeFile("foo.txt")
+            it("non-owner account should not have write permissions", async () => {
+                assert.isFalse(await bucket.hasWriteAccess(1, accounts[1]))
+            })
 
-            let files = await bucket.totalFiles()
-            assert.equal(files.toNumber(), 0, "bucket should not have any files in it")
-        })
-
-        it("re-add removed file", async () => {
-            await bucket.addFile("foo.txt", "fakehash123abc", {from: owner})
-
-            let file = await bucket.totalFiles()
-            assert.equal(file.toNumber(), 1, "bucket should only contain 1 file")
-        })
-
-        context("non-owners", async () => {
-            it("non-owner cannot add file", async () => {
+            it("non-owner cannot set read permission", async () => {
                 return assertRevert( async () => {
-                    await bucket.addFile("foo.txt", "fakehash123abc", {from: accounts[1]})
+                    await bucket.setReadPermission(1, accounts[1], true, {from: accounts[1]})
                 })
             })
 
-            it("non-owner cannot remove file", async () => {
+            it("non-owner cannot set write permission", async () => {
                 return assertRevert( async () => {
-                    await bucket.removeFile("foo.txt", {from: accounts[1]})
+                    await bucket.setWritePermission(1, accounts[1], true, {from: accounts[1]})
                 })
             })
 
-            it("non-owner cannot set file hash", async () => {
-                return assertRevert( async () => {
-                    await bucket.setIPFSHash("foo.txt", "321hashfake", {from: accounts[1]})
-                })
+            it("owner can grant read permisssion", async () => {
+                await bucket.setReadPermission(1, accounts[1], true, {from: owner})
+
+                assert.isTrue(await bucket.hasReadAccess(1, accounts[1]))
             })
 
-            it("non-owner cannot destroy bucket", async () => {
-                return assertRevert( async () => {
-                    await bucket.destroy({from: accounts[1]})
-                })
+            it("owner can grant write permisssion", async () => {
+                await bucket.setWritePermission(1, accounts[1], true, {from: owner})
+
+                assert.isTrue(await bucket.hasWriteAccess(1, accounts[1]))
             })
         })
     })
