@@ -1,77 +1,155 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 
 import "./Ownable.sol";
 
 contract Bucket is Ownable {
     address public owner;
-    string[] private fileNames;
-    mapping (string => string) private fileHashes;
-    mapping (string => bool) private fileExists;
+    uint public lastFileId = 0;
+    mapping (uint => File) private files;
 
-    event FileAdded(string _filename, string _ipfsHash);
-    event FileRemoved(string _filename, string ipfsHash);
-    event FileHashUpdated(string _filename, string _newIPFSHash);
+    event FileRename(address indexed entity, uint fileId);
+    event FileContentUpdate(address indexed entity, uint fileId);
+    event NewFile(address indexed entity, uint fileId);
+    event NewWritePermission(address indexed entity, uint fileId);
+    event NewReadPermission(address indexed entity, uint fileId);
+    event DeleteFile(address indexed entity, uint fileId);
 
-    function Bucket() public {
+    struct File {
+        string storageRef;
+        string name;
+        uint fileSize;
+        bool isPublic;
+        bool isDeleted;
+        address fileOwner;
+        uint lastModified;
+        mapping (address => Permission) permissions;
+        address[] permissionAddresses;
+    }
+
+    struct Permission {
+        bool read;
+        bool write;
+        bool exists;
+    }
+
+    constructor() public {
         owner = msg.sender;
     }
 
-    function destroy() onlyOwner public {
+    function destroy() public onlyOwner {
         selfdestruct(owner);
     }
 
-    function addFile(string _filename, string _ipfsHash) public onlyOwner returns (bool) {
-        bytes memory _filenameBytes = bytes(_filename);
-        bytes memory _hashBytes = bytes(_filename);
-        if (fileExists[_filename] || _filenameBytes.length == 0 || _hashBytes.length == 0) {
-            return false;
-        }
+    function addFile(string _storageRef, string _name, uint _fileSize, bool _isPublic) public onlyOwner returns (uint) {
+        lastFileId = lastFileId + 1;
 
-        fileNames.push(_filename);
-        fileHashes[_filename] = _ipfsHash;
-        fileExists[_filename] = true;
-        emit FileAdded(_filename, _ipfsHash);
-        return true;
+        files[lastFileId] = File({
+            storageRef: _storageRef,
+            name: _name,
+            fileSize: _fileSize,
+            isPublic: _isPublic,
+            isDeleted: false,
+            fileOwner: owner,
+            lastModified: now,
+            permissionAddresses: new address[](0)
+        });
+        emit NewFile(owner, lastFileId);
+        return lastFileId;
     }
 
-    function removeFile(string _filename) public onlyOwner returns (bool) {
-        if (!_fileExists(_filename)) {
-            return false;
-        }
+    function getFile(uint _fileId)
+        public
+        view
+        returns (
+            string storageRef,
+            string name,
+            uint fileSize,
+            bool isPublic,
+            bool isDeleted,
+            address fileOwner,
+            bool isOwner,
+            uint lastModified,
+            address[] permissionAddresses,
+            bool writeAccess
+        )
+    {
+        File storage file = files[_fileId];
 
-        for (uint i = 0; i < fileNames.length; i++) {
-            string memory filename = fileNames[i];
-            if (keccak256(filename) == keccak256(_filename)) {
-                fileNames[i] = fileNames[fileNames.length - 1];
-                delete fileNames[fileNames.length - 1];
-                fileNames.length--;
-                break;
-            }
-        }
-
-        string storage fileHash = fileHashes[_filename];
-        fileHashes[_filename] = "";
-        fileExists[_filename] = false;
-        emit FileRemoved(_filename, fileHash);
-        return true;
+        storageRef = file.storageRef;
+        name = file.name;
+        fileSize = file.fileSize;
+        isPublic = file.isPublic;
+        isDeleted = file.isDeleted;
+        fileOwner = file.fileOwner;
+        isOwner = msg.sender == owner;
+        lastModified = file.lastModified;
+        permissionAddresses = file.permissionAddresses;
+        writeAccess = hasWriteAccess(_fileId, msg.sender);
     }
 
-    function ipfsHash(string _filename) public view onlyOwner returns (string) { return fileHashes[_filename]; }
-
-    function setIPFSHash(string _filename, string _ipfsHash) public onlyOwner returns (bool) {
-        bytes memory _hashBytes = bytes(_ipfsHash);
-        if (!_fileExists(_filename) || _hashBytes.length == 0) {
-            return false;
-        }
-
-        fileHashes[_filename] = _ipfsHash;
-        emit FileHashUpdated(_filename, _ipfsHash);
-        return true;
+    function removeFile(uint _fileId) public onlyOwner {
+        files[_fileId].isDeleted = true;
+        files[_fileId].lastModified = now;
+        emit DeleteFile(owner, lastFileId);
     }
 
-    function totalFiles() public view returns (uint256) { return fileNames.length; }
+    function setFileName(uint _fileId, string _newName) public {
+        require(hasWriteAccess(_fileId, msg.sender), "sender not authorized");
 
-    function _fileExists(string _filename) internal view returns (bool) {
-        return fileExists[_filename];
+        files[_fileId].name = _newName;
+        files[_fileId].lastModified = now;
+        emit FileRename(msg.sender, lastFileId);
+    }
+
+    function setFileContent(uint _fileId, string _storageRef, uint _fileSize) public {
+        require(hasWriteAccess(_fileId, msg.sender), "sender not authorized");
+
+        files[_fileId].storageRef = _storageRef;
+        files[_fileId].fileSize = _fileSize;
+        files[_fileId].lastModified = now;
+        emit FileRename(msg.sender, lastFileId);
+    }
+
+    function getPermissionAddresses(uint _fileId) public view returns (address[] addresses) {
+        return files[_fileId].permissionAddresses;
+    }
+
+    function getPermission(uint _fileId, address _entity) public view returns (bool write, bool read) {
+        Permission storage permission = files[_fileId].permissions[_entity];
+
+        write = permission.write;
+        read = permission.read;
+    }
+
+    function setWritePermission(uint _fileId, address _entity, bool _permission) public onlyOwner {
+        if (!files[_fileId].permissions[_entity].exists) {
+            files[_fileId].permissionAddresses.push(_entity);
+            files[_fileId].permissions[_entity].exists = true;
+        }
+
+        files[_fileId].permissions[_entity].write = _permission;
+        emit NewWritePermission(msg.sender, lastFileId);
+    }
+
+    function setReadPermission(uint _fileId, address _entity, bool _permission) public onlyOwner {
+        if (!files[_fileId].permissions[_entity].exists) {
+            files[_fileId].permissionAddresses.push(_entity);
+            files[_fileId].permissions[_entity].exists = true;
+        }
+
+        files[_fileId].permissions[_entity].read = _permission;
+        emit NewWritePermission(msg.sender, lastFileId);
+    }
+
+    function hasWriteAccess(uint _fileId, address _entity) public view returns (bool){
+        return isOwner(_entity) || files[_fileId].permissions[_entity].write;
+    }
+
+    function hasReadAccess(uint _fileId, address _entity) public view returns (bool){
+        return isOwner(_entity) || files[_fileId].permissions[_entity].read;
+    }
+
+    function isOwner(address _entity) internal view returns (bool) {
+        return _entity == owner;
     }
 }

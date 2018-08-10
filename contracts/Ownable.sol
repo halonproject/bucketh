@@ -18,7 +18,7 @@ contract Ownable {
      * @dev The Ownable constructor sets the original `owner` of the contract to the sender
      * account.
      */
-    function Ownable() public {
+    constructor() public {
         owner = msg.sender;
     }
 
@@ -26,7 +26,7 @@ contract Ownable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "sender is not contract owner");
         _;
     }
 
@@ -35,7 +35,7 @@ contract Ownable {
      * @param newOwner The address to transfer ownership to.
      */
     function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0));
+        require(newOwner != address(0), "cannot make 0 address as owner");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
     }
@@ -44,8 +44,8 @@ contract Ownable {
      * @dev Allows the current owner to relinquish control of the contract.
      */
     function renounceOwnership() public onlyOwner {
-      emit OwnershipRenounced(owner);
-      owner = address(0);
+        emit OwnershipRenounced(owner);
+        owner = address(0);
     }
 
 }
